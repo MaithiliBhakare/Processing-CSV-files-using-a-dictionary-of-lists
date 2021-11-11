@@ -1,0 +1,120 @@
+import os
+import numpy as np
+import math
+import urllib.request
+from urllib.request import urlretrieve
+url1 = 'https://gist.githubusercontent.com/aakashns/257f6e6c8719c17d0e498ea287d1a386/raw/7def9ef4234ddf0bc82f855ad67dac8b971852ef/loans1.txt'
+url2 = 'https://gist.githubusercontent.com/aakashns/257f6e6c8719c17d0e498ea287d1a386/raw/7def9ef4234ddf0bc82f855ad67dac8b971852ef/loans2.txt'
+url3 = 'https://gist.githubusercontent.com/aakashns/257f6e6c8719c17d0e498ea287d1a386/raw/7def9ef4234ddf0bc82f855ad67dac8b971852ef/loans3.txt'
+urlretrieve(url1, './data2/loans1.txt')
+urlretrieve(url2, './data2/loans2.txt')
+urlretrieve(url3, './data2/loans3.txt')
+def header(data):
+    return data.strip().split(',')
+
+def value(data):
+    values = []
+    for item in data.strip().split(','):
+        if item == '':
+            values.append(float(0.0))
+        else:
+            values.append(float(item))       
+    return values
+
+def create_item_dict(result, headers, values):
+   # print('result in create =', result)
+    #print('headers in create =', headers)
+    #print('values in create =', values)
+    for header, value in zip(headers, values):
+            if header in result:
+                result[header].append(value)
+               # print("I am in if create loop")
+            else:
+                result[header] = [value]
+               # print("I am in else loop")
+    return result
+    
+def read_csv_columnar(path):
+    result = {}
+    
+    #print('result = ', result)
+    
+    with open(path, 'r') as f:
+        f_lines = f.readlines()
+        
+      #  print('f_lines =', f_lines)
+        
+        headers = header(f_lines[0])
+       # print('headers =', headers)
+        
+        for line in f_lines[1:]:
+        #    print('line =', line)
+            
+            values = value(line)
+        #    print('values =', values)
+            
+            result = create_item_dict(result, headers, values)
+          #  print('result =', result)
+    return result
+
+def compute_emis(arr):
+    loan_list = list(arr.values())
+   # print('loan_dic after list =', loan_list)
+    for i in range(len(loan_list[0])):
+      #  print('i=', i)
+        amount = loan_list[0][i]
+       # print('amount =', amount)
+        duration = loan_list[1][i]
+      #  print('duration=', duration)
+        rate = loan_list[2][i]
+      #  print('rate=', rate)
+        down_payment = loan_list[3][i]
+        #print('down_payment=', down_payment)
+        #print('length =', len(loan_list[0]))
+        loan_amount = amount-down_payment
+        #print('loan amount =', loan_amount)
+        try:
+            emi = loan_amount*rate*((1+rate)**duration)/(((1+rate)**duration)-1)
+          #  print('emi in try =', emi)
+        except ZeroDivisionError:
+            emi = loan_amount/duration
+            #print('emi in except =', emi)
+        emi = np.round(emi,1)
+        #print('emi after math=', emi)
+        #print(type(emi))
+        if 'emi' in arr:
+            arr['emi'].append(emi)
+        else:
+            arr['emi']=[emi]
+        #print('arr alongwith emi=', arr)
+    return arr
+
+def write_csv_columnar(path, arr):
+    with open(path, 'w') as f:
+        headers = list(arr.keys())
+       # print('headers in write=', headers)
+        values = list(arr.values())
+      #  print('values in write=', values)
+        f.write('{}\n'.format(','.join(headers) + '\n'))
+
+        for i in range(len(values[0])):
+            temp =[]
+        #    print('i=',i)          
+      #      print('Temp =', temp)
+            for header in headers:
+          #      print('Header in write-for =',header)
+            #    print(str(dic[header][i]))
+                temp.append(str(arr[header][i]))
+              #  print(temp)
+            f.write(','.join(temp)+'\n')
+rloans1 = read_csv_columnar('./data2/loans1.txt')
+print(rloans1)
+print(compute_emis(rloans1))
+write_csv_columnar('./data2/emis1.txt', rloans1)
+with open('./data2/emis1.txt', 'r') as file:
+    file = file.readlines()
+file
+for i in range(1,4):
+    rloans = read_csv_columnar('./data2/loans{}.txt'.format(i))
+    compute_emis(rloans)
+    write_csv_columnar('./data2/loans{}.txt'.format(i), rloans)
